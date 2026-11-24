@@ -1,0 +1,142 @@
+/* ============================================================================
+   1. CALCULATED TABLES
+   ============================================================================ */
+
+-- Role-playing Salesperson table (direct 1:* relationship to Sales)
+Salesperson =
+'Salesperson (Performance)'
+
+-- Fiscal Calendar Table (Fiscal Year ends June 30)
+Date =
+CALENDARAUTO(6)
+
+
+/* ============================================================================
+   2. DATE TABLE CALCULATED COLUMNS
+   ============================================================================ */
+
+Year =
+"FY" & YEAR('Date'[Date]) + IF(MONTH('Date'[Date]) > 6, 1)
+
+Quarter =
+'Date'[Year] & " Q"
+    & IF(
+        MONTH('Date'[Date]) <= 3,
+        3,
+        IF(
+            MONTH('Date'[Date]) <= 6,
+            4,
+            IF(
+                MONTH('Date'[Date]) <= 9,
+                1,
+                2
+            )
+        )
+    )
+
+Month =
+FORMAT('Date'[Date], "yyyy MMM")
+
+MonthKey =
+(YEAR('Date'[Date]) * 100) + MONTH('Date'[Date])
+
+
+/* ============================================================================
+   3. SALES TABLE MEASURES
+   ============================================================================ */
+
+-- Display Folder: Pricing
+Avg Price =
+AVERAGE(Sales[Unit Price])
+
+Median Price =
+MEDIAN(Sales[Unit Price])
+
+Min Price =
+MIN(Sales[Unit Price])
+
+Max Price =
+MAX(Sales[Unit Price])
+
+Profit =
+SUM(Sales[Sales]) - SUM(Sales[Cost])
+
+Profit Margin =
+DIVIDE([Profit], SUM(Sales[Sales]))
+
+-- Display Folder: Counts
+Orders =
+DISTINCTCOUNT(Sales[SalesOrderNumber])
+
+Order Lines =
+COUNTROWS(Sales)
+
+-- Display Folder: Ratios (Filter-Context Manipulation)
+Sales % All Region =
+DIVIDE(
+    SUM(Sales[Sales]),
+    CALCULATE(
+        SUM(Sales[Sales]),
+        REMOVEFILTERS(Region)
+    )
+)
+
+Sales % Country =
+IF(
+    ISINSCOPE(Region[Region]),
+    DIVIDE(
+        SUM(Sales[Sales]),
+        CALCULATE(
+            SUM(Sales[Sales]),
+            REMOVEFILTERS(Region[Region])
+        )
+    )
+)
+
+Sales % Group =
+IF(
+    ISINSCOPE(Region[Region]) || ISINSCOPE(Region[Country]),
+    DIVIDE(
+        SUM(Sales[Sales]),
+        CALCULATE(
+            SUM(Sales[Sales]),
+            REMOVEFILTERS(
+                Region[Region],
+                Region[Country]
+            )
+        )
+    )
+)
+
+-- Display Folder: Time Intelligence
+Sales YTD =
+TOTALYTD(SUM(Sales[Sales]), 'Date'[Date], "6-30")
+
+Sales YoY Growth =
+VAR SalesPriorYear =
+    CALCULATE(
+        SUM(Sales[Sales]),
+        PARALLELPERIOD('Date'[Date], -12, MONTH)
+    )
+RETURN
+    DIVIDE(SUM(Sales[Sales]) - SalesPriorYear, SalesPriorYear)
+
+
+/* ============================================================================
+   4. TARGETS TABLE MEASURES
+   ============================================================================ */
+
+Target =
+IF(
+    HASONEVALUE('Salesperson (Performance)'[Salesperson]),
+    SUM(Targets[TargetAmount])
+)
+
+Variance =
+IF(
+    HASONEVALUE('Salesperson (Performance)'[Salesperson]),
+    SUM(Sales[Sales]) - [Target]
+)
+
+Variance Margin =
+DIVIDE([Variance], [Target])
