@@ -1,0 +1,19 @@
+# Database backups & nested archives
+*.bak
+*.mdf
+*.ldf
+*.zip
+
+# Power BI temporary files
+*.pbix.tmp
+
+# Course documents & Office temp files
+*.docx
+~$*.docx
+~$*.xlsx
+Practise questions.pdf
+05-05-2025.pdf
+
+# OS clutter
+.DS_Store
+Thumbs.db
